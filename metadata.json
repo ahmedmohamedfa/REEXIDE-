@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "REEX IDE",
+  "description": "An offline-capable Flutter & Dart IDE for Android with code editor, project manager, terminal, package cache, and build tools.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
