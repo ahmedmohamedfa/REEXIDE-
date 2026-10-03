@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.service.GitService
+import com.example.service.LocalizationManager
 import com.example.ui.theme.AccentGreen
 import com.example.ui.theme.CyanPrimary
 import com.example.ui.theme.DarkBackground
@@ -67,30 +69,88 @@ fun GitDialog(
                 Icon(Icons.Default.Commit, contentDescription = null, tint = CyanPrimary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text("Git Version Control", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Branch: main • ${projectDir.name}", color = Color(0xFF8B949E), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                    Text(
+                        text = LocalizationManager.str("إدارة النسخ و Git", "Git Version Control"),
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = LocalizationManager.str("تتبع التغييرات وسجل الـ Commits", "Track changes & Commit History"),
+                        color = Color(0xFF8B949E),
+                        fontSize = 11.sp
+                    )
                 }
             }
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // New Commit Box
-                Text("Commit Changes", color = Color(0xFF8B949E), fontSize = 12.sp)
+                // Changed Files Status
+                Text(
+                    text = "${LocalizationManager.str("الملفات المعدلة", "Changed Files")} (${statusFiles.size})",
+                    color = Color(0xFF8B949E),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(DarkBackground)
+                        .padding(8.dp)
+                ) {
+                    if (statusFiles.isEmpty()) {
+                        Text(
+                            text = LocalizationManager.str("شجرة العمل نظيفة (لا توجد ملفات معدلة)", "Working tree clean, no uncommitted changes."),
+                            color = AccentGreen,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    } else {
+                        Column {
+                            statusFiles.take(4).forEach { file ->
+                                Text(
+                                    text = "M  $file",
+                                    color = Color(0xFF58A6FF),
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                            if (statusFiles.size > 4) {
+                                Text(
+                                    text = "... +${statusFiles.size - 4} files",
+                                    color = Color(0xFF8B949E),
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Commit Input
                 OutlinedTextField(
                     value = commitMessage,
                     onValueChange = { commitMessage = it },
-                    placeholder = { Text("Enter commit message...", fontSize = 12.sp, color = Color(0xFF8B949E)) },
+                    placeholder = {
+                        Text(
+                            text = LocalizationManager.str("رسالة الـ Commit...", "Commit message..."),
+                            color = Color(0xFF8B949E),
+                            fontSize = 12.sp
+                        )
+                    },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
                         focusedBorderColor = CyanPrimary,
-                        unfocusedBorderColor = DarkBorder,
-                        focusedContainerColor = DarkBackground,
-                        unfocusedContainerColor = DarkBackground
+                        unfocusedBorderColor = DarkBorder
                     ),
-                    modifier = Modifier.fillMaxWidth().testTag("git_commit_input")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("git_commit_input")
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -105,25 +165,36 @@ fun GitDialog(
                     },
                     enabled = commitMessage.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary),
-                    modifier = Modifier.fillMaxWidth().testTag("git_commit_button")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("git_commit_button")
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Commit to main", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(
+                        text = LocalizationManager.str("تأكيد الحفظ (Commit to main)", "Commit to main"),
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Commit History
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.History, contentDescription = null, tint = Color(0xFF8B949E), modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Commit History (${commits.size})", color = Color(0xFF8B949E), fontSize = 12.sp)
+                    Text(
+                        text = "${LocalizationManager.str("سجل الحفظ (Commits)", "Commit History")} (${commits.size})",
+                        color = Color(0xFF8B949E),
+                        fontSize = 12.sp
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                LazyColumn(modifier = Modifier.height(180.dp)) {
+                LazyColumn(modifier = Modifier.heightIn(max = 190.dp)) {
                     items(commits) { c ->
                         Row(
                             modifier = Modifier
@@ -135,17 +206,18 @@ fun GitDialog(
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = c.hash,
-                                color = CyanPrimary,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(DarkSurfaceVariant)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(c.hash.take(7), color = CyanPrimary, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(c.message, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                Text("${c.author} • ${c.date}", color = Color(0xFF8B949E), fontSize = 10.sp)
+                                Text(c.message, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(c.author, color = Color(0xFF8B949E), fontSize = 10.sp)
                             }
                         }
                     }
@@ -153,11 +225,11 @@ fun GitDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
-            ) {
-                Text("Close", color = Color.Black, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = LocalizationManager.str("إغلاق", "Close"),
+                    color = Color(0xFF8B949E)
+                )
             }
         }
     )

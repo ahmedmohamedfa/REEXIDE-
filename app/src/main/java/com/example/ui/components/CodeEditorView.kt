@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TextDecrease
+import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,12 +50,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Diagnostic
 import com.example.model.DiagnosticSeverity
+import com.example.service.LocalizationManager
 import com.example.ui.theme.AccentRed
 import com.example.ui.theme.AccentYellow
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceVariant
+import com.example.ui.theme.RobotoMonoFontFamily
 import com.example.ui.theme.SyntaxAnnotation
 import com.example.ui.theme.SyntaxComment
 import com.example.ui.theme.SyntaxKeyword
@@ -60,7 +66,7 @@ import com.example.ui.theme.SyntaxString
 import com.example.ui.theme.SyntaxType
 import com.example.ui.theme.SyntaxWidget
 
-class DartSyntaxHighlighter : VisualTransformation {
+class DartSyntaxHighlighter(private val searchQuery: String = "") : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val highlighted = buildAnnotatedString {
             val content = text.text
@@ -119,6 +125,20 @@ class DartSyntaxHighlighter : VisualTransformation {
             for (match in commentRegex.findAll(content)) {
                 addStyle(SpanStyle(color = SyntaxComment), match.range.first, match.range.last + 1)
             }
+
+            // In-Editor Search Matches Highlighter
+            if (searchQuery.isNotBlank() && searchQuery.length >= 2) {
+                try {
+                    val searchRegex = Regex.escape(searchQuery).toRegex(RegexOption.IGNORE_CASE)
+                    for (match in searchRegex.findAll(content)) {
+                        addStyle(
+                            SpanStyle(background = Color(0xFFFFD600), color = Color.Black, fontWeight = FontWeight.Bold),
+                            match.range.first,
+                            match.range.last + 1
+                        )
+                    }
+                } catch (_: Exception) {}
+            }
         }
 
         return TransformedText(highlighted, OffsetMapping.Identity)
@@ -131,13 +151,14 @@ fun CodeEditorView(
     onValueChange: (TextFieldValue) -> Unit,
     diagnostics: List<Diagnostic>,
     fontSizeSp: Int = 13,
+    onFontSizeChange: (Int) -> Unit = {},
     isSearchVisible: Boolean = false,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onCloseSearch: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val highlighter = remember { DartSyntaxHighlighter() }
+    val highlighter = remember(searchQuery) { DartSyntaxHighlighter(searchQuery) }
     val verticalScroll = rememberScrollState()
     val horizontalScroll = rememberScrollState()
 
@@ -152,13 +173,23 @@ fun CodeEditorView(
         diagnostics.filter { it.severity == DiagnosticSeverity.WARNING }.map { it.line }.toSet()
     }
 
+    val matchCount = remember(textFieldValue.text, searchQuery) {
+        if (searchQuery.length >= 2) {
+            try {
+                Regex.escape(searchQuery).toRegex(RegexOption.IGNORE_CASE).findAll(textFieldValue.text).count()
+            } catch (_: Exception) {
+                0
+            }
+        } else 0
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(DarkBackground)
             .testTag("code_editor_view")
     ) {
-        // Search bar
+        // Search & Editor Settings Bar
         if (isSearchVisible) {
             Row(
                 modifier = Modifier
@@ -168,11 +199,11 @@ fun CodeEditorView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFF8B949E))
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
-                    placeholder = { Text("Search in file...", fontSize = 12.sp, color = Color(0xFF8B949E)) },
+                    placeholder = { Text(LocalizationManager.str("بحث في الملف...", "Search in file..."), fontSize = 12.sp, color = Color(0xFF8B949E)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
@@ -185,6 +216,41 @@ fun CodeEditorView(
                         .height(44.dp)
                         .testTag("editor_search_field")
                 )
+
+                if (matchCount > 0) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "$matchCount ${LocalizationManager.str("مطابقة", "matches")}",
+                        color = Color(0xFFFFD600),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                // Font Size Zoom Controls
+                IconButton(
+                    onClick = { if (fontSizeSp > 10) onFontSizeChange(fontSizeSp - 1) },
+                    modifier = Modifier.size(32.dp).testTag("editor_zoom_out")
+                ) {
+                    Icon(Icons.Default.TextDecrease, contentDescription = "Zoom Out", tint = Color(0xFFC9D1D9), modifier = Modifier.size(16.dp))
+                }
+
+                Text(
+                    text = "${fontSizeSp}sp",
+                    color = Color(0xFF8B949E),
+                    fontSize = 10.sp,
+                    fontFamily = RobotoMonoFontFamily
+                )
+
+                IconButton(
+                    onClick = { if (fontSizeSp < 24) onFontSizeChange(fontSizeSp + 1) },
+                    modifier = Modifier.size(32.dp).testTag("editor_zoom_in")
+                ) {
+                    Icon(Icons.Default.TextIncrease, contentDescription = "Zoom In", tint = Color(0xFFC9D1D9), modifier = Modifier.size(16.dp))
+                }
+
                 IconButton(onClick = onCloseSearch) {
                     Icon(Icons.Default.Close, contentDescription = "Close search", tint = Color(0xFF8B949E))
                 }
@@ -231,7 +297,7 @@ fun CodeEditorView(
                                 warningLines.contains(i) -> AccentYellow
                                 else -> Color(0xFF484F58)
                             },
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = RobotoMonoFontFamily,
                             fontSize = fontSizeSp.sp,
                             fontWeight = FontWeight.Medium,
                             lineHeight = (fontSizeSp + 7).sp
@@ -261,7 +327,7 @@ fun CodeEditorView(
                     visualTransformation = highlighter,
                     textStyle = TextStyle(
                         color = Color(0xFFE6EDF3),
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = RobotoMonoFontFamily,
                         fontSize = fontSizeSp.sp,
                         lineHeight = (fontSizeSp + 7).sp
                     ),

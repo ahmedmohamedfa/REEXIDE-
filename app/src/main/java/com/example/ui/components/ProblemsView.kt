@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Diagnostic
 import com.example.model.DiagnosticSeverity
+import com.example.service.LocalizationManager
 import com.example.ui.theme.AccentGreen
 import com.example.ui.theme.AccentRed
 import com.example.ui.theme.AccentYellow
@@ -87,7 +88,7 @@ fun ProblemsView(
             FilterChip(
                 selected = selectedFilter == null,
                 onClick = { selectedFilter = null },
-                label = { Text("All (${diagnostics.size})", fontSize = 11.sp) },
+                label = { Text("${LocalizationManager.str("الكل", "All")} (${diagnostics.size})", fontSize = 11.sp) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = DarkSurfaceVariant,
                     selectedLabelColor = Color.White,
@@ -102,7 +103,7 @@ fun ProblemsView(
                 leadingIcon = {
                     Icon(Icons.Default.Error, contentDescription = null, tint = AccentRed, modifier = Modifier.size(14.dp))
                 },
-                label = { Text("Errors ($errorCount)", fontSize = 11.sp) },
+                label = { Text("${LocalizationManager.str("الأخطاء", "Errors")} ($errorCount)", fontSize = 11.sp) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = DarkSurfaceVariant,
                     selectedLabelColor = AccentRed,
@@ -117,7 +118,7 @@ fun ProblemsView(
                 leadingIcon = {
                     Icon(Icons.Default.Warning, contentDescription = null, tint = AccentYellow, modifier = Modifier.size(14.dp))
                 },
-                label = { Text("Warnings ($warningCount)", fontSize = 11.sp) },
+                label = { Text("${LocalizationManager.str("التحذيرات", "Warnings")} ($warningCount)", fontSize = 11.sp) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = DarkSurfaceVariant,
                     selectedLabelColor = AccentYellow,
@@ -144,13 +145,13 @@ fun ProblemsView(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "No problems found in workspace",
+                        text = LocalizationManager.str("لا توجد أخطاء في ملفات المشروع [✓]", "No problems found in workspace [✓]"),
                         color = Color(0xFFC9D1D9),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Dart Analysis engine is active",
+                        text = LocalizationManager.str("محرك تحليل Dart الذكي نشط ويعمل", "Dart Analysis engine is active"),
                         color = Color(0xFF8B949E),
                         fontSize = 11.sp
                     )

@@ -66,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -171,7 +172,21 @@ fun IdeScreen(
     var showAiCopilotDialog by remember { mutableStateOf(false) }
 
     val runtime: IFlutterRuntime = remember { FlutterRuntimeManager() }
-    val aiService = remember { AiProjectAgentService() }
+    val aiService = remember { AiProjectAgentService(context) }
+
+    var editorFontSize by remember { mutableStateOf(13) }
+    val undoStack = remember { mutableStateListOf<TextFieldValue>() }
+    val redoStack = remember { mutableStateListOf<TextFieldValue>() }
+
+    fun recordUndoState() {
+        if (undoStack.isEmpty() || undoStack.last().text != editorText.text) {
+            if (undoStack.size >= 50) {
+                undoStack.removeAt(0)
+            }
+            undoStack.add(editorText)
+            redoStack.clear()
+        }
+    }
 
     LaunchedEffect(showPreviewModal) {
         if (showPreviewModal) {
@@ -402,11 +417,16 @@ fun IdeScreen(
                     CodeEditorView(
                         textFieldValue = editorText,
                         onValueChange = { newVal ->
+                            if (editorText.text != newVal.text && Math.abs(editorText.text.length - newVal.text.length) > 2) {
+                                recordUndoState()
+                            }
                             editorText = newVal
                             isUnsaved = true
                             runAnalysis(newVal.text)
                         },
                         diagnostics = diagnostics,
+                        fontSizeSp = editorFontSize,
+                        onFontSizeChange = { editorFontSize = it },
                         isSearchVisible = isSearchVisible,
                         searchQuery = searchQuery,
                         onSearchQueryChange = { q -> searchQuery = q },
@@ -417,6 +437,7 @@ fun IdeScreen(
                 // Mobile Coding Accessory Toolbar
                 CodingToolbar(
                     onInsertSymbol = { sym ->
+                        recordUndoState()
                         val current = editorText.text
                         val sel = editorText.selection
                         val newText = current.substring(0, sel.start) + sym + current.substring(sel.end)
@@ -426,29 +447,45 @@ fun IdeScreen(
                         runAnalysis(newText)
                     },
                     onUndo = {
-                        // Basic undo support
+                        if (undoStack.isNotEmpty()) {
+                            redoStack.add(editorText)
+                            val prev = undoStack.removeAt(undoStack.size - 1)
+                            editorText = prev
+                            isUnsaved = true
+                            runAnalysis(prev.text)
+                        }
                     },
                     onRedo = {
-                        // Basic redo support
+                        if (redoStack.isNotEmpty()) {
+                            undoStack.add(editorText)
+                            val next = redoStack.removeAt(redoStack.size - 1)
+                            editorText = next
+                            isUnsaved = true
+                            runAnalysis(next.text)
+                        }
                     },
                     onFormat = {
+                        recordUndoState()
                         val formatted = formatterService.format(editorText.text)
                         editorText = TextFieldValue(formatted)
                         isUnsaved = true
                         runAnalysis(formatted)
-                        Toast.makeText(context, "Formatted with Dart style", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, LocalizationManager.str("تم تنسيق الكود بأسلوب Dart القياسي", "Formatted with Dart style"), Toast.LENGTH_SHORT).show()
                     },
                     onFindToggle = {
                         isSearchVisible = !isSearchVisible
                     },
                     onToggleComment = {
+                        recordUndoState()
                         val current = editorText.text
                         val sel = editorText.selection
                         val newText = current.substring(0, sel.start) + "// " + current.substring(sel.end)
                         editorText = TextFieldValue(newText, TextRange(sel.start + 3))
                         isUnsaved = true
+                        runAnalysis(newText)
                     },
                     onInsertSnippet = { key ->
+                        recordUndoState()
                         val snippet = when (key) {
                             "stless" -> "\nclass MyWidget extends StatelessWidget {\n  const MyWidget({super.key});\n\n  @override\n  Widget build(BuildContext context) {\n    return Container();\n  }\n}\n"
                             "stful" -> "\nclass MyWidget extends StatefulWidget {\n  const MyWidget({super.key});\n\n  @override\n  State<MyWidget> createState() => _MyWidgetState();\n}\n\nclass _MyWidgetState extends State<MyWidget> {\n  @override\n  Widget build(BuildContext context) {\n    return Container();\n  }\n}\n"
@@ -660,6 +697,7 @@ fun IdeScreen(
             currentCode = editorText.text,
             diagnosticsSummary = summary,
             onApplyCode = { newCode ->
+                recordUndoState()
                 editorText = TextFieldValue(newCode)
                 if (currentFile.exists()) {
                     currentFile.writeText(newCode)

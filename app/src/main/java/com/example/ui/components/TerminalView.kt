@@ -55,6 +55,7 @@ import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceVariant
+import com.example.ui.theme.RobotoMonoFontFamily
 
 @Composable
 fun TerminalView(
@@ -161,7 +162,7 @@ fun TerminalView(
                 items(outputLines) { line ->
                     Text(
                         text = line.text,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = RobotoMonoFontFamily,
                         fontSize = 12.sp,
                         color = when {
                             line.isError -> AccentRed
@@ -187,7 +188,7 @@ fun TerminalView(
                 text = "$ ",
                 color = AccentGreen,
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = RobotoMonoFontFamily,
                 fontSize = 14.sp
             )
             OutlinedTextField(

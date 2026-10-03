@@ -60,13 +60,13 @@ fun PackageCatalogDialog(
     projectDir: File,
     packageService: PackageManagerService,
     onDismiss: () -> Unit,
-    onPackageChanged: () -> Unit
+    onPubspecModified: () -> Unit
 ) {
-    var packages by remember { mutableStateOf(packageService.getCatalogWithStatus(projectDir)) }
+    var packages by remember { mutableStateOf(packageService.getCatalog(projectDir)) }
 
     fun refresh() {
-        packages = packageService.getCatalogWithStatus(projectDir)
-        onPackageChanged()
+        packages = packageService.getCatalog(projectDir)
+        onPubspecModified()
     }
 
     AlertDialog(
@@ -78,13 +78,13 @@ fun PackageCatalogDialog(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = LocalizationManager.str("مكتبات Pub دون اتصال", "Pub Package Cache"),
+                        text = LocalizationManager.str("مستودع حزم Pub بدون إنترنت", "Pub Package Cache"),
                         color = Color.White,
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = LocalizationManager.str("كتالوج الحزم المثبتة في الذاكرة المحلية", "Offline Verified Packages Catalog"),
+                        text = LocalizationManager.str("كتالوج الحزم المعتمدة مسبقاً للتجميع الفوري", "Offline Verified Packages Catalog"),
                         color = Color(0xFF8B949E),
                         fontSize = 11.sp
                     )
@@ -95,7 +95,7 @@ fun PackageCatalogDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = LocalizationManager.str(
-                        "جميع الحزم أدناه مثبتة مسبقاً في Pub Cache المحلي للبناء السريع بدون إنترنت.",
+                        "جميع الحزم التالية مخزنة مسبقاً في الذاكرة لتثبيتها واستخدامها دون الحاجة للإنترنت.",
                         "All packages below are pre-cached in Global Pub Cache for instant offline compilation."
                     ),
                     color = Color(0xFF8B949E),
@@ -103,7 +103,7 @@ fun PackageCatalogDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
                     items(packages, key = { it.name }) { pkg ->
                         Row(
                             modifier = Modifier
@@ -158,31 +158,43 @@ fun PackageCatalogDialog(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
-
                             if (pkg.isInstalledInCurrentProject) {
-                                OutlinedButton(
-                                    onClick = {
-                                        packageService.removePackageFromProject(projectDir, pkg.name)
-                                        refresh()
-                                    },
-                                    shape = RoundedCornerShape(6.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, AccentRed),
-                                    modifier = Modifier.height(34.dp).testTag("pkg_remove_${pkg.name}")
-                                ) {
-                                    Icon(Icons.Default.DeleteOutline, contentDescription = "Remove", tint = AccentRed, modifier = Modifier.size(16.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(AccentGreen.copy(alpha = 0.2f))
+                                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = LocalizationManager.str("مثبت ✓", "Installed"),
+                                            color = AccentGreen,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            packageService.removePackageFromProject(projectDir, pkg.name)
+                                            refresh()
+                                        },
+                                        modifier = Modifier.size(34.dp).testTag("pkg_remove_${pkg.name}")
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Remove", tint = AccentRed, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             } else {
                                 Button(
                                     onClick = {
-                                        packageService.addPackageToProject(projectDir, pkg.name, pkg.version)
+                                        packageService.addPackageToProject(projectDir, pkg)
                                         refresh()
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary),
                                     shape = RoundedCornerShape(6.dp),
-                                    modifier = Modifier.height(34.dp).testTag("pkg_add_${pkg.name}")
+                                    modifier = Modifier.height(32.dp).testTag("pkg_install_${pkg.name}")
                                 ) {
-                                    Icon(Icons.Default.Download, contentDescription = "Add", tint = Color.Black, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Download, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = LocalizationManager.str("تثبيت", "Add"),
@@ -198,15 +210,10 @@ fun PackageCatalogDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary),
-                shape = RoundedCornerShape(8.dp)
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text(
-                    text = LocalizationManager.str("تم", "Done"),
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold
+                    text = LocalizationManager.str("إغلاق", "Close"),
+                    color = Color(0xFF8B949E)
                 )
             }
         }

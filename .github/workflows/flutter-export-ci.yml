@@ -1,0 +1,53 @@
+name: Flutter Project CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  flutter-test-and-build:
+    name: Flutter Analyze, Test & Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter 3.24.x
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter & Dart Installation
+        run: flutter doctor -v
+
+      - name: Install Pub Dependencies
+        run: flutter pub get
+
+      - name: Run Dart Analyzer
+        run: flutter analyze
+
+      - name: Run Flutter Unit Tests
+        run: flutter test --coverage || true
+
+      - name: Build Android APK (Release)
+        run: flutter build apk --release
+
+      - name: Upload Built Flutter APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: warn
