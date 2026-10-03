@@ -120,25 +120,48 @@ class FlutterRuntimeManager : IFlutterRuntime {
 
     override fun triggerAction(actionName: String) {
         val currentVars = _state.value.stateVariables.toMutableMap()
-        when (actionName) {
-            "increment" -> {
+        when {
+            actionName == "increment" -> {
                 val current = (currentVars["_counter"] as? Int) ?: 0
                 val next = current + 1
                 currentVars["_counter"] = next
                 _state.value = _state.value.copy(stateVariables = currentVars)
                 log("I/flutter (1024): setState(() { _counter = $next; });")
             }
-            "reset" -> {
+            actionName == "reset" -> {
                 currentVars["_counter"] = 0
                 _state.value = _state.value.copy(stateVariables = currentVars)
                 log("I/flutter (1024): setState(() { _counter = 0; });")
             }
-            "save_note" -> {
-                val currentNotes = (currentVars["_savedText"] as? String) ?: ""
+            actionName == "login" -> {
+                log("I/flutter (1024): Navigator.pushNamed(context, '/home');")
+                log("I/flutter (1024): [✓] User authenticated successfully! Token saved in SecureStorage.")
+            }
+            actionName == "add_task" -> {
+                val tasks = (currentVars["_tasks"] as? List<*>)?.map { it.toString() }?.toMutableList() ?: mutableListOf()
+                tasks.add("New Flutter Task #${tasks.size + 1}")
+                currentVars["_tasks"] = tasks
+                _state.value = _state.value.copy(stateVariables = currentVars)
+                log("I/flutter (1024): setState(() { _tasks.add('New Flutter Task #${tasks.size}'); });")
+            }
+            actionName.startsWith("delete_task") -> {
+                val idx = actionName.removePrefix("delete_task_").toIntOrNull() ?: 0
+                val tasks = (currentVars["_tasks"] as? List<*>)?.map { it.toString() }?.toMutableList() ?: mutableListOf()
+                if (idx in 0 until tasks.size) {
+                    tasks.removeAt(idx)
+                    currentVars["_tasks"] = tasks
+                    _state.value = _state.value.copy(stateVariables = currentVars)
+                    log("I/flutter (1024): setState(() { _tasks.removeAt($idx); });")
+                }
+            }
+            actionName == "save_note" -> {
                 log("I/flutter (1024): SharedPreferences.setString('saved_note', note);")
             }
-            "fetch_api" -> {
+            actionName == "fetch_api" -> {
                 log("I/flutter (1024): HTTP GET https://httpbin.org/get -> 200 OK")
+            }
+            else -> {
+                log("I/flutter (1024): Widget action executed: $actionName")
             }
         }
     }

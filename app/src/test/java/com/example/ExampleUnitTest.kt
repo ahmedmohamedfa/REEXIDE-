@@ -211,4 +211,55 @@ class ExampleUnitTest {
         assertEquals(source.text, transformed.text.text)
         assertTrue(transformed.text.spanStyles.isNotEmpty())
     }
+
+    @Test
+    fun testDynamicLoginScreenParsing() {
+        val parser = FlutterWidgetParser()
+        val loginCode = """
+            import 'package:flutter/material.dart';
+            class LoginScreen extends StatelessWidget {
+              Widget build(BuildContext context) {
+                return Scaffold(
+                  appBar: AppBar(title: Text('Sign In')),
+                  body: Column(
+                    children: [
+                      TextField(decoration: InputDecoration(labelText: 'Email')),
+                      TextField(decoration: InputDecoration(labelText: 'Password')),
+                      ElevatedButton(child: Text('Sign In'), onPressed: () {}),
+                    ],
+                  ),
+                );
+              }
+            }
+        """.trimIndent()
+
+        val result = parser.parse(loginCode)
+        assertNotNull(result.rootWidget)
+        val scaffold = result.rootWidget as ParsedWidget.Scaffold
+        assertEquals("Sign In", scaffold.appBar?.title)
+        assertNotNull(scaffold.body)
+    }
+
+    @Test
+    fun testDownloadCustomPackageFromPub() {
+        val packageService = PackageManagerService()
+        val tempDir = File.createTempFile("reex_pkg_dl", "").apply {
+            delete()
+            mkdirs()
+        }
+        val pubspec = File(tempDir, "pubspec.yaml")
+        pubspec.writeText(
+            """
+            name: test_app
+            dependencies:
+              flutter:
+                sdk: flutter
+            """.trimIndent()
+        )
+
+        val (success, msg) = packageService.downloadAndInstallCustomPackage(tempDir, "camera", "^0.11.0")
+        assertTrue(success)
+        assertTrue(pubspec.readText().contains("camera: ^0.11.0"))
+        tempDir.deleteRecursively()
+    }
 }

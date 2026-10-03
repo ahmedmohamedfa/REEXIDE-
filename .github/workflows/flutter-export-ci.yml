@@ -17,13 +17,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Check for Flutter Project Structure
+        id: check_flutter
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            echo "is_flutter=true" >> $GITHUB_OUTPUT
+            echo "Flutter project detected (pubspec.yaml found)."
+          else
+            echo "is_flutter=false" >> $GITHUB_OUTPUT
+            echo "Skipping Flutter steps: Current repository is REEX IDE Android App, not an exported Flutter project."
+          fi
+
       - name: Set up Java
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Set up Flutter 3.24.x
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
@@ -31,21 +44,27 @@ jobs:
           cache: true
 
       - name: Verify Flutter & Dart Installation
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         run: flutter doctor -v
 
       - name: Install Pub Dependencies
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         run: flutter pub get
 
       - name: Run Dart Analyzer
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         run: flutter analyze
 
       - name: Run Flutter Unit Tests
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         run: flutter test --coverage || true
 
       - name: Build Android APK (Release)
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         run: flutter build apk --release
 
       - name: Upload Built Flutter APK
+        if: steps.check_flutter.outputs.is_flutter == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: flutter-release-apk

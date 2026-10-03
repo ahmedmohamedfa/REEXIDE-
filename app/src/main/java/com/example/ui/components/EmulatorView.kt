@@ -3,12 +3,15 @@ package com.example.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -336,22 +339,32 @@ fun EmulatorView(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Physical Device Frame Container
-                Box(
+                BoxWithConstraints(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    val phoneWidth = if (isLandscape) selectedDevice.heightDp.dp else selectedDevice.widthDp.dp
-                    val phoneHeight = if (isLandscape) selectedDevice.widthDp.dp else selectedDevice.heightDp.dp
+                    val maxH = maxHeight - 8.dp
+                    val maxW = maxWidth - 8.dp
+                    val baseW = if (isLandscape) selectedDevice.heightDp.dp else selectedDevice.widthDp.dp
+                    val baseH = if (isLandscape) selectedDevice.widthDp.dp else selectedDevice.heightDp.dp
+
+                    val scaleFactor = minOf(
+                        (maxW.value / baseW.value).coerceAtMost(1f),
+                        (maxH.value / baseH.value).coerceAtMost(1f)
+                    )
+
+                    val phoneWidth = (baseW * scaleFactor).coerceIn(240.dp, maxW)
+                    val phoneHeight = (baseH * scaleFactor).coerceIn(360.dp, maxH)
 
                     Box(
                         modifier = Modifier
                             .width(phoneWidth)
                             .height(phoneHeight)
-                            .shadow(20.dp, RoundedCornerShape(30.dp))
-                            .border(4.dp, Color(0xFF30363D), RoundedCornerShape(30.dp))
-                            .clip(RoundedCornerShape(30.dp))
+                            .shadow(16.dp, RoundedCornerShape(26.dp))
+                            .border(3.dp, Color(0xFF30363D), RoundedCornerShape(26.dp))
+                            .clip(RoundedCornerShape(26.dp))
                             .background(Color(0xFF0F141C))
                     ) {
                         Column(modifier = Modifier.fillMaxSize()) {
@@ -617,7 +630,8 @@ private fun RenderComprehensiveScaffold(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(14.dp)
             ) {
                 val body = scaffold.body
                 if (body != null) {
@@ -749,7 +763,7 @@ private fun RenderAnyWidget(
         is ParsedWidget.OutlinedButton -> {
             OutlinedButton(
                 onClick = { onTriggerAction(widget.action) },
-                border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(CyanPrimary))
+                border = BorderStroke(1.dp, CyanPrimary)
             ) {
                 Text(widget.label, color = CyanPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }

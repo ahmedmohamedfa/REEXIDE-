@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build & Test Android App
+    name: Build & Test REEX IDE Android App
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -22,20 +22,44 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew || true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Prepare Gradle Wrapper
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+          else
+            echo "Generating Gradle wrapper..."
+            gradle wrapper --gradle-version 9.3.1 || gradle wrapper || true
+            if [ -f "./gradlew" ]; then
+              chmod +x ./gradlew
+            fi
+          fi
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew testDebugUnitTest --no-daemon --stacktrace
+          else
+            gradle testDebugUnitTest --no-daemon --stacktrace
+          fi
 
       - name: Build Android Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            gradle assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: reex-ide-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
           retention-days: 14
